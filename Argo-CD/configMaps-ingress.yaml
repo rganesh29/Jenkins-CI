@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+data:
+  default.conf: |  
+
+    #limit_req_zone $realip_remote_addr zone=global_limit:10m rate=10r/s;
+    #limit_req_zone $realip_remote_addr zone=login_limit:10m rate=5r/s;
+    limit_req_zone $realip_remote_addr zone=homepage_limit:10m rate=10r/s;
+
+
+    log_format json_combined escape=json '{'
+        '"time_local":"$time_local",'
+        '"client_real_ip":"$realip_remote_addr",' # This captures your laptop IP
+        '"proxy_ip":"$remote_addr",'             # This captures the LB internal IP
+        '"request":"$request",'
+        '"status": "$status",'
+        '"body_bytes_sent":"$body_bytes_sent",'
+        '"http_referer":"$http_referer",'
+        '"http_user_agent":"$http_user_agent",'
+        '"request_time":"$request_time",'
+        '"upstream_response_time":"$upstream_response_time",'
+        '"upstream_addr":"$upstream_addr",'
+        '"upstream_status":"$upstream_status"'
+    '}';
+
+    server {
+      listen 80;
+      listen [::]:80;
+      server_name localhost;
+
+      access_log /var/log/nginx/access.log json_combined;
+
+      # --- REAL IP MODULE CONFIGURATION ---
+      # These lines tell NGINX to look past the AWS Load Balancer
+      set_real_ip_from  192.168.0.0/16; 
+      set_real_ip_from  10.0.0.0/8;      
+      real_ip_header    X-Forwarded-For;
+      real_ip_recursive on;
+
+      #limit_req_status 429;
+      #limit_req zone=global_limit burst=10 nodelay;
+
+      location / {
+          limit_req_status 429;
+          limit_req zone=homepage_limit burst=10 nodelay;
+          proxy_pass http://login:80/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      location /login/ {
+          proxy_pass http://login:80/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      location /signup/ {
+          proxy_pass http://signup:80/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      location /success/ {
+          proxy_pass http://success:80/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      location /api/ {
+
+          #limit_req zone=login_limit burst=5 nodelay;
+
+          proxy_pass http://backend:5000/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+    }

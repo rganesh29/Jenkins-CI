@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-signup-deployment
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  labels:
+    app: signup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signup
+  template:
+    metadata:
+      labels:
+        app: signup
+    spec:
+      # volumes:
+      # - name: signup-conf-vol
+      #   configMap:
+      #     name: signup-config
+      containers:
+      - name: signup
+        image: rganesh7/frontend-signup:v1.0
+        ports:
+        - containerPort: 80
+        # volumeMounts:
+        # - name: signup-conf-vol
+        #   mountPath: "/etc/nginx/conf.d"
+          # readOnly: true
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: signup
+spec:
+  selector:
+    app: signup
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80

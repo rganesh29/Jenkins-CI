@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+  labels:
+    app: ingress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingress
+  template:
+    metadata:
+      labels:
+        app: ingress
+    spec:
+      volumes:
+      - name: ingress-conf-vol
+        configMap:
+          name: nginx-config
+      # --- NEW VOLUME ADDED BELOW ---
+      - name: nginx-logs-vol
+        hostPath:
+          path: /var/log/nginx-ingress-logs
+          type: DirectoryOrCreate
+      containers:
+      - name: nginx-ingress
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        # command: ["rm", "-rf", "/etc/nginx/conf.d/default.conf"]
+        volumeMounts:
+        - name: ingress-conf-vol
+          mountPath: "/etc/nginx/conf.d/"
+          readOnly: true
+        # --- NEW MOUNT ADDED BELOW ---
+        - name: nginx-logs-vol
+          mountPath: /var/log/nginx # This is where NGINX writes access.log
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress
+  annotations:
+    # This tells AWS to use a specific health check that works with "Local" policy
+    #service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    #service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  selector:
+    app: ingress
+  externalTrafficPolicy: Local
+  #type: LoadBalancer
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30001
