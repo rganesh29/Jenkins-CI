@@ -4,7 +4,7 @@ pipeline{
     stages{
         stage ('Sonarqube') {
             environment{
-                SONAR_URL = "http://54.91.2.27:9000" 
+                SONAR_URL = "http://98.81.173.139:9000" 
             }
             steps {
                 withCredentials([string(credentialsId: 'sonarqube', varibale: "SONAR_TOKEN")]) {
