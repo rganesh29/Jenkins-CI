@@ -21,20 +21,20 @@ pipeline{
             }
         }
 
-        // stage ('Docker build and push') {
-        //     environment {
-        //         DOCKER_IMAGE = "rganesh7/helloworld:${BUILD_NUMBER}"
-        //         DOCKER_CRED = credentials('docker-cred')
-        //     }
-        //     steps {
-        //         script {
-        //             sh 'docker build -t ${DOCKER_IMAGE} .'
-        //             def dockerImage = docker.image("${DOCKER_IMAGE}")
-        //             docker.withRegistry('https://index.docker.io/v1/', "docker-cred")
-        //                 dockerImage.push()
-        //         }
-        //     }
-        // }
+        stage ('Docker build and push') {
+            environment {
+                DOCKER_IMAGE = "rganesh7/helloworld:${BUILD_NUMBER}"
+                DOCKER_CRED = credentials('docker-cred')
+            }
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE} .'
+                    def dockerImage = docker.image("${DOCKER_IMAGE}")
+                    docker.withRegistry('https://index.docker.io/v1/', "docker-cred")
+                        dockerImage.push()
+                }
+            }
+        }
 
         // stage ('Update deployment file') {
         //     environment {
