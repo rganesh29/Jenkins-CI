@@ -7,7 +7,7 @@ pipeline{
                 SONAR_URL = "http://98.81.173.139:9000" 
             }
             steps {
-                withCredentials([string(credentialsId: 'sonarqube', varibale: "SONAR_TOKEN")]) {
+                withCredentials([string(credentialsId: 'sonarqube', variable: "SONAR_TOKEN")]) {
                     sh 'cd app-code/ && mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=${SONAR_URL}'
                 }
             }
@@ -19,10 +19,12 @@ pipeline{
                 DOCKER_CRED = credentials('docker-cred')
             }
             steps {
-                sh 'docker build -t ${DOCKER_IMAGE} .'
-                def dockerImage = docker.image("${DOCKER_IMAGE}")
-                docker.withRegistry('https://hub.docker.com', "docker-cred")
-                    dockerImage.push()
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE} .'
+                    def dockerImage = docker.image("${DOCKER_IMAGE}")
+                    docker.withRegistry('https://index.docker.io/v1/', "docker-cred")
+                        dockerImage.push()
+                }
             }
         }
 
@@ -33,14 +35,14 @@ pipeline{
             }
             steps {
                 withCredentials([string(credentialsId: 'GitHub', variable: "GITHUB_TOKEN")]) {
-                    sh '''
+                    sh """
                         git config user.email "ganeshr2903@gmail.com"
                         git config user.name "rganesh29"
                         BUILD_NUMBER = ${BUILD_NUMBER}
-                        sed -i "s/helloworld:v0.1/helloworld:${BUILD_NUMBER}/g" /Argo-CD/app.yaml
+                        sed -i "s/helloworld:v0.*/helloworld:v0.${BUILD_NUMBER}/g" /Argo-CD/app.yaml
                         git commit -m "Update deployment image to version ${BUILD_NUMBER}"
                         git push https://${GITHUB_TOKEN}@github.com/${gitusername}/${gitreponame} HEAD:main
-                    '''
+                    """
                 }
             }
         }
